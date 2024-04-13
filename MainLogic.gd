@@ -57,6 +57,8 @@ var diamonds_gone = false
 
 var music_file
 
+var gander
+
 # Called when the node enters the scene tree for the first time.
 func _ready():
 	if not state_dict.has("state"):
@@ -103,7 +105,15 @@ func _process(delta):
 			music_player.stream = AudioStreamMP3.new()
 			music_file = FileAccess.open("res://audio/LD55_1.mp3", FileAccess.READ)
 			music_player.stream.data = music_file.get_buffer(music_file.get_length())
+			music_player.stream.loop = true
 			music_player.play()
+			var gander_scene = preload("res://gander_schwartz.tscn")
+			gander = gander_scene.instantiate()
+			add_child(gander)
+			gander.position.x = 800
+			gander.position.y = 50
+			gander.velocity.x = -gander.SPEED
+			gander.auto_control_action = "walking_left"
 		StateT.Introduction_00:
 			update_stop_diamonds(delta)
 			update_text(intro_text_00, StateT.Introduction_00_post)
@@ -141,7 +151,13 @@ func _process(delta):
 			pass
 		_:
 			pass
-			
+	if gander is MainCharacter and not gander.player_controlled and gander.current_scene_type == gander.GanderSceneT.Introduction:
+		if gander.velocity.x < 0.0:
+			if gander.position.x <= 0.0:
+				gander.velocity.x = 0.0
+				gander.auto_control_action = "facing_front"
+		
+
 func _unhandled_input(event):
 	if event.is_pressed() and event.is_action("Confirm"):
 		match state_dict["state"]:
@@ -250,8 +266,8 @@ func update_start_diamonds(delta):
 		state_dict["start_diamonds"]["dist"] = diamond_min_dist
 	state_dict["start_diamonds"]["angle"] += delta * diamond_angle_rate
 	
-	if state_dict["start_diamonds"]["angle"] > PI * 2.0:
-		state_dict["start_diamonds"]["angle"] -= PI * 2.0
+	if state_dict["start_diamonds"]["angle"] > TAU:
+		state_dict["start_diamonds"]["angle"] -= TAU
 	
 	diamond_position_update()
 
@@ -268,7 +284,7 @@ func update_stop_diamonds(delta):
 		earth_diamond.get_parent().remove_child(earth_diamond)
 	state_dict["start_diamonds"]["angle"] += delta * diamond_angle_rate
 	
-	if state_dict["start_diamonds"]["angle"] > PI * 2.0:
-		state_dict["start_diamonds"]["angle"] -= PI * 2.0
+	if state_dict["start_diamonds"]["angle"] > TAU:
+		state_dict["start_diamonds"]["angle"] -= TAU
 	
 	diamond_position_update()
