@@ -42,5 +42,5 @@ texture = ExtResource("4_u6w6s")
 position = Vector2(-980, 90)
 texture = ExtResource("5_3irym")
 
-[node name="AudioStreamPlayer" type="AudioStreamPlayer" parent="."]
+[node name="MusicPlayer" type="AudioStreamPlayer" parent="."]
 stream = ExtResource("6_3kpot")
