@@ -1,4 +1,4 @@
-[gd_scene load_steps=4 format=3 uid="uid://b55f770t7xs6a"]
+[gd_scene load_steps=7 format=3 uid="uid://b55f770t7xs6a"]
 
 [ext_resource type="Texture2D" uid="uid://npjqgc3tdgs1" path="res://gimp/DungeonEntrance.png" id="1_vo6aq"]
 [ext_resource type="Texture2D" uid="uid://nocjsuuft8qx" path="res://gimp/DungeonGuard.png" id="2_nujkm"]
@@ -7,24 +7,60 @@
 radius = 15.0
 height = 32.0
 
+[sub_resource type="WorldBoundaryShape2D" id="WorldBoundaryShape2D_ocep5"]
+normal = Vector2(1, 0)
+
+[sub_resource type="WorldBoundaryShape2D" id="WorldBoundaryShape2D_gq7j0"]
+
+[sub_resource type="WorldBoundaryShape2D" id="WorldBoundaryShape2D_xvl4y"]
+normal = Vector2(-1, 0)
+
 [node name="Node2D" type="Node2D"]
 
 [node name="DungeonEntrance" type="Sprite2D" parent="."]
 texture_filter = 1
-position = Vector2(-1, -320)
+position = Vector2(2, -784)
+scale = Vector2(1.995, 1.995)
 texture = ExtResource("1_vo6aq")
 
 [node name="StaticBody2D" type="StaticBody2D" parent="DungeonEntrance"]
+visible = false
 
 [node name="CollisionPolygon2D" type="CollisionPolygon2D" parent="DungeonEntrance/StaticBody2D"]
+visible = false
 polygon = PackedVector2Array(-160, 127, -159, -129, 160, -126, 161, 127, 21, 127, 21, 79, -19, 79, -19, 127)
 
 [node name="DungeonGuard" type="Sprite2D" parent="."]
 texture_filter = 1
-position = Vector2(0, -208)
+position = Vector2(2, -552)
+scale = Vector2(1.71, 1.71)
 texture = ExtResource("2_nujkm")
 
-[node name="StaticBody2D" type="StaticBody2D" parent="DungeonGuard"]
+[node name="DungeonGuardStaticBody" type="StaticBody2D" parent="DungeonGuard"]
+visible = false
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="DungeonGuard/StaticBody2D"]
+[node name="DungeonGuardCollider" type="CollisionShape2D" parent="DungeonGuard/DungeonGuardStaticBody"]
+visible = false
 shape = SubResource("CapsuleShape2D_18p8i")
+
+[node name="StaticBody2D" type="StaticBody2D" parent="."]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="StaticBody2D"]
+position = Vector2(-307, -1)
+shape = SubResource("WorldBoundaryShape2D_ocep5")
+
+[node name="CollisionShape2D2" type="CollisionShape2D" parent="StaticBody2D"]
+position = Vector2(0, 210)
+shape = SubResource("WorldBoundaryShape2D_gq7j0")
+
+[node name="CollisionShape2D3" type="CollisionShape2D" parent="StaticBody2D"]
+position = Vector2(314, 5)
+shape = SubResource("WorldBoundaryShape2D_xvl4y")
+
+[node name="Label" type="Label" parent="."]
+z_index = 5
+offset_left = -111.0
+offset_top = 152.0
+offset_right = 111.0
+offset_bottom = 175.0
+text = "The Dungeon is to the north!"

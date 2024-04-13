@@ -10,6 +10,10 @@ extends Node2D
 
 @onready var music_player = $MusicPlayer
 
+@onready var camera = $Camera2D
+
+const camera_move_speed = 80.0
+
 const text_speed = 0.08
 
 const start_text = "You seek the elementals?\nProve your worth!\nShow the elements your mastery over summoning, and they are yours!"
@@ -46,18 +50,25 @@ enum StateT {
 	Introduction_05_post,
 	Introduction_06,
 	Introduction_06_post,
-	Dungeon_Entrance
+	Dungeon_Entrance_pre,
+	Dungeon_Entrance_loading,
+	Dungeon_Entrance,
+	Dungeon_Entrance_Battle,
 }
 
 static var state_dict = {}
 
 var tween_volume
+var tween_text
 
 var diamonds_gone = false
 
 var music_file
 
 var gander
+
+var level
+var level_guard = null
 
 # Called when the node enters the scene tree for the first time.
 func _ready():
@@ -149,6 +160,23 @@ func _process(delta):
 			update_text(intro_text_06, StateT.Introduction_06_post)
 		StateT.Introduction_06_post:
 			pass
+		StateT.Dungeon_Entrance_loading:
+			gander.player_controlled = true
+			gander.current_scene_type = gander.GanderSceneT.Gameplay
+			var dungeon_scene = load("res://DungeonEntrance.tscn")
+			level = dungeon_scene.instantiate()
+			add_child(level)
+			state_dict["state"] = StateT.Dungeon_Entrance
+			lower_label.text = "Arrow keys/WASD/Left-Stick to move."
+			tween_text = get_tree().create_tween()
+			tween_text.tween_property(lower_label, "self_modulate", Color(1, 1, 1, 0), 5)
+		StateT.Dungeon_Entrance:
+			camera_to_gander(delta)
+			if level_guard == null:
+				level_guard = level.find_child("DungeonGuardStaticBody")
+			if level_guard != null and gander.last_collided_id == level_guard.get_instance_id():
+				print("collided with guard.")
+				gander.last_collided_id = null
 		_:
 			pass
 	if gander is MainCharacter and not gander.player_controlled and gander.current_scene_type == gander.GanderSceneT.Introduction:
@@ -170,7 +198,10 @@ func _unhandled_input(event):
 				state_dict["state"] = StateT.Start_Stopping
 				tween_volume = get_tree().create_tween()
 				tween_volume.tween_property(music_player, "volume_db", -80.0, 4.0)
-				tween_volume.tween_callback(start_volume_tween_callback)
+				tween_volume.tween_callback(func():
+					music_player.stop()
+					state_dict["state"] = StateT.MainMenu
+				)
 				main_label.text = ""
 				lower_label.text = ""
 			StateT.Introduction_00:
@@ -239,16 +270,19 @@ func _unhandled_input(event):
 				state_dict["text_idx"] = 0
 				main_label.text = intro_text_06
 			StateT.Introduction_06_post:
-				state_dict["state"] = StateT.Dungeon_Entrance
+				state_dict["state"] = StateT.Dungeon_Entrance_pre
 				state_dict["timer"] = 0.0
 				state_dict["text_idx"] = 0
 				main_label.text = ""
+				tween_volume = get_tree().create_tween()
+				tween_volume.tween_property(music_player, "volume_db", -80.0, 4.0)
+				tween_volume.tween_callback(func():
+					music_player.stop()
+					state_dict["state"] = StateT.Dungeon_Entrance_loading
+					music_player.volume_db = 0.0
+				)
 			_:
 				pass
-
-func start_volume_tween_callback():
-	music_player.stop()
-	state_dict["state"] = StateT.MainMenu
 	
 func diamond_position_update():
 	fire_diamond.position.x = cos(state_dict["start_diamonds"]["angle"]) * state_dict["start_diamonds"]["dist"]
@@ -288,3 +322,14 @@ func update_stop_diamonds(delta):
 		state_dict["start_diamonds"]["angle"] -= TAU
 	
 	diamond_position_update()
+
+func camera_to_gander(delta):
+	var diff = gander.position - camera.position
+	if diff.length() > 0.04:
+		var move_vec = diff.normalized() * camera_move_speed * delta
+		if diff.length() < move_vec.length():
+			camera.position = gander.position
+		else:
+			camera.position += move_vec
+	else:
+		camera.position = gander.position
