@@ -1,0 +1,46 @@
+[gd_scene load_steps=7 format=3 uid="uid://ch52ervf073wd"]
+
+[ext_resource type="Script" path="res://MainLogic.gd" id="1_43no1"]
+[ext_resource type="Texture2D" uid="uid://varqu7luxowf" path="res://gimp/earth_diamond.png" id="2_hlcsm"]
+[ext_resource type="Texture2D" uid="uid://dafkwtrfngup" path="res://gimp/fire_diamond.png" id="3_s037p"]
+[ext_resource type="Texture2D" uid="uid://djwgnisoid4co" path="res://gimp/water_diamond.png" id="4_u6w6s"]
+[ext_resource type="Texture2D" uid="uid://d2mxjcl50laoa" path="res://gimp/wind_diamond.png" id="5_3irym"]
+[ext_resource type="AudioStream" uid="uid://2epey2fmmtb2" path="res://audio/LD55_0.mp3" id="6_3kpot"]
+
+[node name="Node2D" type="Node2D"]
+script = ExtResource("1_43no1")
+
+[node name="Camera2D" type="Camera2D" parent="."]
+
+[node name="MainLabel" type="Label" parent="Camera2D"]
+z_index = 1
+offset_left = -277.0
+offset_top = -96.0
+offset_right = 278.0
+offset_bottom = 97.0
+
+[node name="LowerLabel" type="Label" parent="Camera2D"]
+z_index = 1
+offset_left = -237.0
+offset_top = 101.0
+offset_right = 239.0
+offset_bottom = 237.0
+
+[node name="EarthDiamond" type="Sprite2D" parent="."]
+position = Vector2(-913, -324)
+texture = ExtResource("2_hlcsm")
+
+[node name="FireDiamond" type="Sprite2D" parent="."]
+position = Vector2(-945, -192)
+texture = ExtResource("3_s037p")
+
+[node name="WaterDiamond" type="Sprite2D" parent="."]
+position = Vector2(-978, -61)
+texture = ExtResource("4_u6w6s")
+
+[node name="WindDiamond" type="Sprite2D" parent="."]
+position = Vector2(-980, 90)
+texture = ExtResource("5_3irym")
+
+[node name="AudioStreamPlayer" type="AudioStreamPlayer" parent="."]
+stream = ExtResource("6_3kpot")
