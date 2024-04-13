@@ -170,6 +170,17 @@ func _process(delta):
 			lower_label.text = "Arrow keys/WASD/Left-Stick to move."
 			tween_text = get_tree().create_tween()
 			tween_text.tween_property(lower_label, "self_modulate", Color(1, 1, 1, 0), 5)
+			tween_text.tween_callback(func():
+				lower_label.text = ""
+				lower_label.self_modulate = Color(1, 1, 1, 1)
+			)
+			music_file.close()
+			music_player.volume_db = 0.0
+			music_player.stream = AudioStreamMP3.new()
+			music_file = FileAccess.open("res://audio/LD55_2.mp3", FileAccess.READ)
+			music_player.stream.data = music_file.get_buffer(music_file.get_length())
+			music_player.stream.loop = true
+			music_player.play()
 		StateT.Dungeon_Entrance:
 			camera_to_gander(delta)
 			if level_guard == null:
