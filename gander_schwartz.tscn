@@ -1,5 +1,6 @@
-[gd_scene load_steps=19 format=3 uid="uid://ktxqc7xtqkex"]
+[gd_scene load_steps=21 format=3 uid="uid://ktxqc7xtqkex"]
 
+[ext_resource type="Script" path="res://gander_schwartz.gd" id="1_6ob4s"]
 [ext_resource type="Texture2D" uid="uid://cv0qw4j1q78r8" path="res://gimp/GanderSchwartz_spritesheet.png" id="1_n7bds"]
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_mj0lb"]
@@ -157,14 +158,23 @@ animations = [{
 "speed": 5.0
 }]
 
+[sub_resource type="CapsuleShape2D" id="CapsuleShape2D_u3k2h"]
+radius = 15.0
+height = 80.0
+
 [node name="GanderSchwartz" type="CharacterBody2D"]
+motion_mode = 1
+script = ExtResource("1_6ob4s")
 
 [node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="."]
 texture_filter = 1
-position = Vector2(0, -24)
+position = Vector2(0, -51)
+scale = Vector2(2.11, 2.11)
 sprite_frames = SubResource("SpriteFrames_i348s")
 animation = &"walking_front"
 frame = 3
 frame_progress = 0.126405
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+position = Vector2(0, -40)
+shape = SubResource("CapsuleShape2D_u3k2h")

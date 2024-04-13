@@ -13,14 +13,14 @@ script = ExtResource("1_43no1")
 [node name="Camera2D" type="Camera2D" parent="."]
 
 [node name="MainLabel" type="Label" parent="Camera2D"]
-z_index = 1
+z_index = 5
 offset_left = -277.0
 offset_top = -96.0
 offset_right = 278.0
 offset_bottom = 97.0
 
 [node name="LowerLabel" type="Label" parent="Camera2D"]
-z_index = 1
+z_index = 5
 offset_left = -237.0
 offset_top = 101.0
 offset_right = 239.0

@@ -17,6 +17,10 @@ const start_text = "You seek the elementals?\nProve your worth!\nShow the elemen
 const intro_text_00 = "The name's Gander Schwartz.\nBut my friends call me the \"Wandering Gander\"."
 const intro_text_01 = "I'm what most would call a \"third-rate summoner\",\nbut there's a reason for that.\nI summon \"items\", not \"beasts\"."
 const intro_text_02 = "Most summoners summon beasts to fight for them.\nI summon items to fight with, or even tools to solve puzzles in dungeons."
+const intro_text_03 = "There is one dungeon I've been itching to conquer.\nThe elemental dungeon!"
+const intro_text_04 = "If I beat the elemental dungeon,\nI'll be able to enhance my summons with elemental properties!"
+const intro_text_05 = "No longer would I need to light an oil lantern with flint and steel,\nor keep lugging around leather skins for water!"
+const intro_text_06 = "But the dungeon is a challenge.\nA challenge I hope to best with my wits and my item summoning!"
 
 const diamond_angle_rate = 1.2
 const diamond_dist_rate = 50.0
@@ -33,7 +37,16 @@ enum StateT {
 	Introduction_01,
 	Introduction_01_post,
 	Introduction_02,
-	Introduction_02_post
+	Introduction_02_post,
+	Introduction_03,
+	Introduction_03_post,
+	Introduction_04,
+	Introduction_04_post,
+	Introduction_05,
+	Introduction_05_post,
+	Introduction_06,
+	Introduction_06_post,
+	Dungeon_Entrance
 }
 
 static var state_dict = {}
@@ -110,6 +123,22 @@ func _process(delta):
 			update_text(intro_text_02, StateT.Introduction_02_post)
 		StateT.Introduction_02_post:
 			pass
+		StateT.Introduction_03:
+			update_text(intro_text_03, StateT.Introduction_03_post)
+		StateT.Introduction_03_post:
+			pass
+		StateT.Introduction_04:
+			update_text(intro_text_04, StateT.Introduction_04_post)
+		StateT.Introduction_04_post:
+			pass
+		StateT.Introduction_05:
+			update_text(intro_text_05, StateT.Introduction_05_post)
+		StateT.Introduction_05_post:
+			pass
+		StateT.Introduction_06:
+			update_text(intro_text_06, StateT.Introduction_06_post)
+		StateT.Introduction_06_post:
+			pass
 		_:
 			pass
 			
@@ -153,6 +182,51 @@ func _unhandled_input(event):
 				state_dict["timer"] = 0.0
 				state_dict["text_idx"] = 0
 				main_label.text = intro_text_02
+			StateT.Introduction_02_post:
+				state_dict["state"] = StateT.Introduction_03
+				state_dict["timer"] = 0.0
+				state_dict["text_idx"] = 0
+				main_label.text = ""
+			StateT.Introduction_03:
+				state_dict["state"] = StateT.Introduction_03_post
+				state_dict["timer"] = 0.0
+				state_dict["text_idx"] = 0
+				main_label.text = intro_text_03
+			StateT.Introduction_03_post:
+				state_dict["state"] = StateT.Introduction_04
+				state_dict["timer"] = 0.0
+				state_dict["text_idx"] = 0
+				main_label.text = ""
+			StateT.Introduction_04:
+				state_dict["state"] = StateT.Introduction_04_post
+				state_dict["timer"] = 0.0
+				state_dict["text_idx"] = 0
+				main_label.text = intro_text_04
+			StateT.Introduction_04_post:
+				state_dict["state"] = StateT.Introduction_05
+				state_dict["timer"] = 0.0
+				state_dict["text_idx"] = 0
+				main_label.text = ""
+			StateT.Introduction_05:
+				state_dict["state"] = StateT.Introduction_05_post
+				state_dict["timer"] = 0.0
+				state_dict["text_idx"] = 0
+				main_label.text = intro_text_05
+			StateT.Introduction_05_post:
+				state_dict["state"] = StateT.Introduction_06
+				state_dict["timer"] = 0.0
+				state_dict["text_idx"] = 0
+				main_label.text = ""
+			StateT.Introduction_06:
+				state_dict["state"] = StateT.Introduction_06_post
+				state_dict["timer"] = 0.0
+				state_dict["text_idx"] = 0
+				main_label.text = intro_text_06
+			StateT.Introduction_06_post:
+				state_dict["state"] = StateT.Dungeon_Entrance
+				state_dict["timer"] = 0.0
+				state_dict["text_idx"] = 0
+				main_label.text = ""
 			_:
 				pass
 

@@ -1,0 +1,30 @@
+[gd_scene load_steps=4 format=3 uid="uid://b55f770t7xs6a"]
+
+[ext_resource type="Texture2D" uid="uid://npjqgc3tdgs1" path="res://gimp/DungeonEntrance.png" id="1_vo6aq"]
+[ext_resource type="Texture2D" uid="uid://nocjsuuft8qx" path="res://gimp/DungeonGuard.png" id="2_nujkm"]
+
+[sub_resource type="CapsuleShape2D" id="CapsuleShape2D_18p8i"]
+radius = 15.0
+height = 32.0
+
+[node name="Node2D" type="Node2D"]
+
+[node name="DungeonEntrance" type="Sprite2D" parent="."]
+texture_filter = 1
+position = Vector2(-1, -320)
+texture = ExtResource("1_vo6aq")
+
+[node name="StaticBody2D" type="StaticBody2D" parent="DungeonEntrance"]
+
+[node name="CollisionPolygon2D" type="CollisionPolygon2D" parent="DungeonEntrance/StaticBody2D"]
+polygon = PackedVector2Array(-160, 127, -159, -129, 160, -126, 161, 127, 21, 127, 21, 79, -19, 79, -19, 127)
+
+[node name="DungeonGuard" type="Sprite2D" parent="."]
+texture_filter = 1
+position = Vector2(0, -208)
+texture = ExtResource("2_nujkm")
+
+[node name="StaticBody2D" type="StaticBody2D" parent="DungeonGuard"]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="DungeonGuard/StaticBody2D"]
+shape = SubResource("CapsuleShape2D_18p8i")
