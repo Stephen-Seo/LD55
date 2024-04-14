@@ -6,6 +6,7 @@ var player_controlled = false
 enum GanderSceneT {
 	Introduction,
 	Gameplay,
+	Battle,
 }
 var current_scene_type = GanderSceneT.Introduction
 var auto_control_action = "facing_front"
@@ -13,7 +14,6 @@ var auto_control_action = "facing_front"
 var last_collided_id = null
 
 @onready var animated = $AnimatedSprite2D
-@onready var guard = $DungeonGuard
 
 const SPEED = 150.0
 const ANIM_DEADZONE = 0.3
@@ -60,9 +60,10 @@ func _physics_process(delta):
 	elif animated.animation != auto_control_action:
 		animated.play(auto_control_action)
 
-	move_and_slide()
-	var last_collision = get_last_slide_collision()
-	if last_collision != null:
-		last_collided_id = last_collision.get_collider_id()
-	else:
-		last_collided_id = null
+	if current_scene_type != GanderSceneT.Battle:
+		move_and_slide()
+		var last_collision = get_last_slide_collision()
+		if last_collision != null:
+			last_collided_id = last_collision.get_collider_id()
+		else:
+			last_collided_id = null

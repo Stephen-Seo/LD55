@@ -19,7 +19,7 @@ normal = Vector2(-1, 0)
 
 [node name="DungeonEntrance" type="Sprite2D" parent="."]
 texture_filter = 1
-position = Vector2(2, -784)
+position = Vector2(0, -784)
 scale = Vector2(1.995, 1.995)
 texture = ExtResource("1_vo6aq")
 
@@ -32,7 +32,7 @@ polygon = PackedVector2Array(-160, 127, -159, -129, 160, -126, 161, 127, 21, 127
 
 [node name="DungeonGuard" type="Sprite2D" parent="."]
 texture_filter = 1
-position = Vector2(2, -552)
+position = Vector2(0, -552)
 scale = Vector2(1.71, 1.71)
 texture = ExtResource("2_nujkm")
 
@@ -50,7 +50,7 @@ position = Vector2(-307, -1)
 shape = SubResource("WorldBoundaryShape2D_ocep5")
 
 [node name="CollisionShape2D2" type="CollisionShape2D" parent="StaticBody2D"]
-position = Vector2(0, 210)
+position = Vector2(0, 243)
 shape = SubResource("WorldBoundaryShape2D_gq7j0")
 
 [node name="CollisionShape2D3" type="CollisionShape2D" parent="StaticBody2D"]
@@ -59,8 +59,8 @@ shape = SubResource("WorldBoundaryShape2D_xvl4y")
 
 [node name="Label" type="Label" parent="."]
 z_index = 5
-offset_left = -111.0
-offset_top = 152.0
-offset_right = 111.0
-offset_bottom = 175.0
+offset_left = -110.0
+offset_top = 208.0
+offset_right = 112.0
+offset_bottom = 231.0
 text = "The Dungeon is to the north!"

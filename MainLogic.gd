@@ -12,7 +12,7 @@ extends Node2D
 
 @onready var camera = $Camera2D
 
-const camera_move_speed = 80.0
+const camera_move_speed = 1.5
 
 const text_speed = 0.08
 
@@ -21,8 +21,8 @@ const start_text = "You seek the elementals?\nProve your worth!\nShow the elemen
 const intro_text_00 = "The name's Gander Schwartz.\nBut my friends call me the \"Wandering Gander\"."
 const intro_text_01 = "I'm what most would call a \"third-rate summoner\",\nbut there's a reason for that.\nI summon \"items\", not \"beasts\"."
 const intro_text_02 = "Most summoners summon beasts to fight for them.\nI summon items to fight with, or even tools to solve puzzles in dungeons."
-const intro_text_03 = "There is one dungeon I've been itching to conquer.\nThe elemental dungeon!"
-const intro_text_04 = "If I beat the elemental dungeon,\nI'll be able to enhance my summons with elemental properties!"
+const intro_text_03 = "There is one dungeon I've been itching to conquer.\nThe Elemental Dungeon!"
+const intro_text_04 = "If I beat the Elemental Dungeon,\nI'll be able to enhance my summons with elemental properties!"
 const intro_text_05 = "No longer would I need to light an oil lantern with flint and steel,\nor keep lugging around leather skins for water!"
 const intro_text_06 = "But the dungeon is a challenge.\nA challenge I hope to best with my wits and my item summoning!"
 
@@ -56,19 +56,26 @@ enum StateT {
 	Dungeon_Entrance_Battle,
 }
 
+enum BattleMenu {
+	MainMenu,
+}
+
 static var state_dict = {}
 
 var tween_volume
 var tween_text
+var tween_scene
 
 var diamonds_gone = false
-
-var music_file
 
 var gander
 
 var level
 var level_guard = null
+
+var level_cached_pos = null
+
+var viewport_size
 
 # Called when the node enters the scene tree for the first time.
 func _ready():
@@ -81,6 +88,11 @@ func _ready():
 			"angle" : 0.0
 		}
 		music_player.play()
+		viewport_size = get_viewport().size
+		get_viewport().size_changed.connect(func():
+			viewport_size = get_viewport().size
+			state_dict["battle_refresh_gui"] = true
+		)
 
 func update_text(text, next_state):
 	if state_dict["timer"] > text_speed:
@@ -113,9 +125,7 @@ func _process(delta):
 			main_label.text = ""
 			lower_label.text = ""
 			music_player.volume_db = 0.0
-			music_player.stream = AudioStreamMP3.new()
-			music_file = FileAccess.open("res://audio/LD55_1.mp3", FileAccess.READ)
-			music_player.stream.data = music_file.get_buffer(music_file.get_length())
+			music_player.stream = load("res://audio/LD55_1.mp3")
 			music_player.stream.loop = true
 			music_player.play()
 			var gander_scene = preload("res://gander_schwartz.tscn")
@@ -125,6 +135,8 @@ func _process(delta):
 			gander.position.y = 50
 			gander.velocity.x = -gander.SPEED
 			gander.auto_control_action = "walking_left"
+			tween_scene = get_tree().create_tween()
+			tween_scene.tween_method(func(c): RenderingServer.set_default_clear_color(c), Color(0.13, 0.13, 0.13, 1.0), Color(0.3, 0.4, 0.1, 1.0), 4)
 		StateT.Introduction_00:
 			update_stop_diamonds(delta)
 			update_text(intro_text_00, StateT.Introduction_00_post)
@@ -174,11 +186,8 @@ func _process(delta):
 				lower_label.text = ""
 				lower_label.self_modulate = Color(1, 1, 1, 1)
 			)
-			music_file.close()
 			music_player.volume_db = 0.0
-			music_player.stream = AudioStreamMP3.new()
-			music_file = FileAccess.open("res://audio/LD55_2.mp3", FileAccess.READ)
-			music_player.stream.data = music_file.get_buffer(music_file.get_length())
+			music_player.stream = load("res://audio/LD55_2.mp3")
 			music_player.stream.loop = true
 			music_player.play()
 		StateT.Dungeon_Entrance:
@@ -188,6 +197,33 @@ func _process(delta):
 			if level_guard != null and gander.last_collided_id == level_guard.get_instance_id():
 				print("collided with guard.")
 				gander.last_collided_id = null
+				music_player.stop()
+				music_player.stream = preload("res://audio/LD55_3.mp3")
+				music_player.stream.loop = true
+				music_player.play()
+				level.find_child("DungeonGuardCollider").set_deferred("disabled", true)
+				gander.find_child("CollisionShape2D").set_deferred("disabled", true)
+				gander.player_controlled = false
+				gander.current_scene_type = gander.GanderSceneT.Battle
+				tween_scene = get_tree().create_tween()
+				level_cached_pos = level.find_child("DungeonEntrance").position
+				var battle_pos = level_cached_pos + Vector2(0.0, 500.0)
+				tween_scene.set_parallel()
+				tween_scene.tween_property(level.find_child("DungeonGuard"), "position", battle_pos - Vector2(200.0, 30.0), 2.0)
+				tween_scene.tween_property(gander, "position", battle_pos + Vector2(200.0, 0.0), 2.0)
+				gander.auto_control_action = "walking_right"
+				tween_scene.set_parallel(false)
+				tween_scene.tween_callback(func():
+					gander.auto_control_action = "facing_left"
+					state_dict["state"] = StateT.Dungeon_Entrance_Battle
+					state_dict["battle_state"] = BattleMenu.MainMenu
+					state_dict["battle_menu_setup"] = false
+					state_dict["battle_refresh_gui"] = false
+					state_dict["battle_item"] = null
+				)
+		StateT.Dungeon_Entrance_Battle:
+			camera_to_target(delta, level_cached_pos + Vector2(0.0, 500.0))
+			setup_battle_menu()
 		_:
 			pass
 	if gander is MainCharacter and not gander.player_controlled and gander.current_scene_type == gander.GanderSceneT.Introduction:
@@ -198,7 +234,9 @@ func _process(delta):
 		
 
 func _unhandled_input(event):
-	if event.is_pressed() and event.is_action("Confirm"):
+	if state_dict["state"] == StateT.Dungeon_Entrance_Battle:
+		handle_battle_input(event)
+	elif event.is_pressed() and event.is_action("Confirm"):
 		match state_dict["state"]:
 			StateT.Start:
 				main_label.text = start_text
@@ -335,12 +373,75 @@ func update_stop_diamonds(delta):
 	diamond_position_update()
 
 func camera_to_gander(delta):
-	var diff = gander.position - camera.position
-	if diff.length() > 0.04:
-		var move_vec = diff.normalized() * camera_move_speed * delta
-		if diff.length() < move_vec.length():
-			camera.position = gander.position
-		else:
-			camera.position += move_vec
-	else:
-		camera.position = gander.position
+	camera_to_target(delta, gander.position)
+
+func camera_to_target(delta, vec2):
+	var diff = vec2 - camera.position
+	camera.position += diff * delta * camera_move_speed
+
+func setup_battle_menu():
+	match state_dict["battle_state"]:
+		BattleMenu.MainMenu:
+			if not state_dict["battle_menu_setup"] or state_dict["battle_refresh_gui"]:
+				state_dict["battle_menu_setup"] = true
+				state_dict["battle_refresh_gui"] = false
+				var battle_arrow = camera.find_child("BattleArrow")
+				if battle_arrow == null:
+					battle_arrow = Sprite2D.new()
+					battle_arrow.set_name(&"BattleArrow")
+					battle_arrow.texture = load("res://gimp/arrow.png")
+					camera.add_child(battle_arrow, true)
+					battle_arrow.set_owner(camera)
+				var battle_menu_item_0 = camera.find_child("BattleMenuItem0")
+				if battle_menu_item_0 == null:
+					battle_menu_item_0 = Label.new()
+					battle_menu_item_0.set_name(&"BattleMenuItem0")
+					camera.add_child(battle_menu_item_0, true)
+					battle_menu_item_0.set_owner(camera)
+				var battle_menu_item_1 = camera.find_child("BattleMenuItem1")
+				if battle_menu_item_1 == null:
+					battle_menu_item_1 = Label.new()
+					battle_menu_item_1.set_name(&"BattleMenuItem1")
+					camera.add_child(battle_menu_item_1, true)
+					battle_menu_item_1.set_owner(camera)
+				if state_dict["battle_item"] == null:
+					battle_menu_item_0.text = "Summon Item"
+					battle_menu_item_1.text = ""
+					var arrow_rect = battle_arrow.get_rect()
+					battle_arrow.position.x = (arrow_rect.size.x - viewport_size.x) / 2.0
+					battle_arrow.position.y = (viewport_size.y - arrow_rect.size.y) / 2.0
+					battle_menu_item_0.position.x = arrow_rect.size.x - viewport_size.x / 2.0
+					battle_menu_item_0.position.y = battle_arrow.position.y
+					state_dict["battle_selection"] = 0
+					state_dict["battle_options"] = ["summon"]
+				else:
+					battle_menu_item_0.text = "Attack with Item"
+					battle_menu_item_1.text = "Summon new Item"
+					var arrow_rect = battle_arrow.get_rect()
+					battle_arrow.position.x = (arrow_rect.size.x - viewport_size.x) / 2.0
+					battle_arrow.position.y = (viewport_size.y - arrow_rect.size.y * 3.0) / 2.0
+					battle_menu_item_0.position.x = arrow_rect.size.x - viewport_size.x / 2.0
+					battle_menu_item_0.position.y = battle_arrow.position.y
+					battle_menu_item_1.position.x = arrow_rect.size.x - viewport_size.x / 2.0
+					battle_menu_item_1.position.y = battle_arrow.position.y + arrow_rect.size.y
+					state_dict["battle_selection"] = 0
+					state_dict["battle_options"] = ["attack", "summon"]
+
+func handle_battle_input(event: InputEvent):
+	if event.is_pressed():
+		if event.is_action("Down"):
+			state_dict["battle_selection"] += 1
+			if state_dict["battle_selection"] >= state_dict["battle_options"].size():
+				state_dict["battle_selection"] = 0
+			battle_arrow_positioning()
+		elif event.is_action("Up"):
+			state_dict["battle_selection"] -= 1
+			if state_dict["battle_selection"] < 0:
+				state_dict["battle_selection"] = state_dict["battle_options"].size() - 1
+			battle_arrow_positioning()
+
+func battle_arrow_positioning():
+	var battle_arrow: Sprite2D = camera.find_child("BattleArrow")
+	if battle_arrow != null:
+		var arrow_rect = battle_arrow.get_rect()
+		battle_arrow.position.y = (viewport_size.y + arrow_rect.size.y) / 2.0 - (arrow_rect.size.y * (state_dict["battle_options"].size() - state_dict["battle_selection"]))
