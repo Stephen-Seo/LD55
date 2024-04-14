@@ -1,4 +1,4 @@
-[gd_scene load_steps=21 format=3 uid="uid://ktxqc7xtqkex"]
+[gd_scene load_steps=23 format=3 uid="uid://ktxqc7xtqkex"]
 
 [ext_resource type="Script" path="res://gander_schwartz.gd" id="1_6ob4s"]
 [ext_resource type="Texture2D" uid="uid://cv0qw4j1q78r8" path="res://gimp/GanderSchwartz_spritesheet.png" id="1_n7bds"]
@@ -162,6 +162,14 @@ animations = [{
 radius = 15.0
 height = 80.0
 
+[sub_resource type="CapsuleShape2D" id="CapsuleShape2D_sy0be"]
+radius = 32.0
+height = 126.0
+
+[sub_resource type="CapsuleShape2D" id="CapsuleShape2D_58op3"]
+radius = 13.0
+height = 76.0
+
 [node name="GanderSchwartz" type="CharacterBody2D"]
 motion_mode = 1
 script = ExtResource("1_6ob4s")
@@ -178,3 +186,25 @@ frame_progress = 0.126405
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]
 position = Vector2(0, -40)
 shape = SubResource("CapsuleShape2D_u3k2h")
+
+[node name="ParryArea2D" type="Area2D" parent="."]
+collision_layer = 4
+collision_mask = 2
+input_pickable = false
+monitorable = false
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="ParryArea2D"]
+position = Vector2(0, -40)
+shape = SubResource("CapsuleShape2D_sy0be")
+debug_color = Color(0.631373, 0.352941, 0.984314, 0.419608)
+
+[node name="HitArea2D" type="Area2D" parent="."]
+collision_layer = 4
+collision_mask = 2
+input_pickable = false
+monitorable = false
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="HitArea2D"]
+position = Vector2(0, -40)
+shape = SubResource("CapsuleShape2D_58op3")
+debug_color = Color(0.988235, 0, 0.290196, 0.419608)

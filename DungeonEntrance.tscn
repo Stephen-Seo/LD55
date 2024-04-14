@@ -1,11 +1,14 @@
-[gd_scene load_steps=7 format=3 uid="uid://b55f770t7xs6a"]
+[gd_scene load_steps=9 format=3 uid="uid://b55f770t7xs6a"]
 
 [ext_resource type="Texture2D" uid="uid://npjqgc3tdgs1" path="res://gimp/DungeonEntrance.png" id="1_vo6aq"]
 [ext_resource type="Texture2D" uid="uid://nocjsuuft8qx" path="res://gimp/DungeonGuard.png" id="2_nujkm"]
+[ext_resource type="Script" path="res://DungeonGuard.gd" id="3_hisk5"]
 
-[sub_resource type="CapsuleShape2D" id="CapsuleShape2D_18p8i"]
-radius = 15.0
-height = 32.0
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_fey6x"]
+size = Vector2(30.4094, 31.5789)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_0v5y2"]
+size = Vector2(30.4094, 31.5789)
 
 [sub_resource type="WorldBoundaryShape2D" id="WorldBoundaryShape2D_ocep5"]
 normal = Vector2(1, 0)
@@ -35,13 +38,22 @@ texture_filter = 1
 position = Vector2(0, -552)
 scale = Vector2(1.71, 1.71)
 texture = ExtResource("2_nujkm")
+script = ExtResource("3_hisk5")
 
-[node name="DungeonGuardStaticBody" type="StaticBody2D" parent="DungeonGuard"]
-visible = false
+[node name="DungeonGuardBody" type="StaticBody2D" parent="DungeonGuard"]
 
-[node name="DungeonGuardCollider" type="CollisionShape2D" parent="DungeonGuard/DungeonGuardStaticBody"]
-visible = false
-shape = SubResource("CapsuleShape2D_18p8i")
+[node name="DungeonGuardCollider" type="CollisionShape2D" parent="DungeonGuard/DungeonGuardBody"]
+shape = SubResource("RectangleShape2D_fey6x")
+
+[node name="Area2D" type="Area2D" parent="DungeonGuard"]
+collision_layer = 3
+collision_mask = 0
+input_pickable = false
+monitoring = false
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="DungeonGuard/Area2D"]
+shape = SubResource("RectangleShape2D_0v5y2")
+debug_color = Color(0.643137, 0.341176, 0.988235, 0.419608)
 
 [node name="StaticBody2D" type="StaticBody2D" parent="."]
 

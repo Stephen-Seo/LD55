@@ -14,6 +14,10 @@ var sfx_select
 var sfx_confirm
 var sfx_cancel
 var sfx_summon
+var sfx_enemy_hit
+var sfx_parry
+var sfx_sword_hit
+var sfx_hammer_hit
 
 @onready var camera = $Camera2D
 
@@ -35,6 +39,8 @@ const diamond_angle_rate = 1.2
 const diamond_dist_rate = 50.0
 const diamond_start_dist = 800.0
 const diamond_min_dist = 150.0
+
+const parry_penalty = 0.5
 
 enum StateT {
 	Start,
@@ -67,7 +73,16 @@ enum BattleState {
 	SummonSword,
 	SummonHammer,
 	EnemyAttack,
+	PlayerAttack,
+	PlayerWin,
+	PlayerLose,
 }
+
+enum GuardPhase {
+	Stomp,
+}
+
+var guard_phase = GuardPhase.Stomp
 
 static var state_dict = {}
 
@@ -80,11 +95,16 @@ var diamonds_gone = false
 var gander
 
 var level
+var level_guard_static_body = null
 var level_guard = null
+var level_guard_cached_pos = null
 
 var level_cached_pos = null
 
 var viewport_size
+
+var play_attack_sfx_type = null
+var play_attack_sfx_once = false
 
 # Called when the node enters the scene tree for the first time.
 func _ready():
@@ -106,6 +126,10 @@ func _ready():
 		sfx_confirm = load("res://audio/LD55_sfx_confirm.mp3")
 		sfx_cancel = load("res://audio/LD55_sfx_cancel.mp3")
 		sfx_summon = load("res://audio/LD55_sfx_summon.mp3")
+		sfx_enemy_hit = load("res://audio/LD55_sfx_enemy_hit.mp3")
+		sfx_parry = load("res://audio/LD55_sfx_parry.mp3")
+		sfx_sword_hit = load("res://audio/LD55_sfx_sword_hit.mp3")
+		sfx_hammer_hit = load("res://audio/LD55_sfx_hammer_hit.mp3")
 
 func update_text(text, next_state):
 	if state_dict["timer"] > text_speed:
@@ -144,6 +168,7 @@ func _process(delta):
 			var gander_scene = preload("res://gander_schwartz.tscn")
 			gander = gander_scene.instantiate()
 			add_child(gander)
+			gander.set_owner(self)
 			gander.position.x = 800
 			gander.position.y = 50
 			gander.velocity.x = -gander.SPEED
@@ -206,13 +231,16 @@ func _process(delta):
 		StateT.Dungeon_Entrance:
 			camera_to_gander(delta)
 			if level_guard == null:
-				level_guard = level.find_child("DungeonGuardStaticBody")
-			if level_guard != null and gander.last_collided_id == level_guard.get_instance_id():
+				level_guard = level.find_child("DungeonGuard")
+			if level_guard_static_body == null:
+				level_guard_static_body = level.find_child("DungeonGuardBody")
+			if level_guard_static_body != null and gander.last_collided_id == level_guard_static_body.get_instance_id():
 				print("collided with guard.")
 				gander.last_collided_id = null
 				music_player.stop()
 				music_player.stream = preload("res://audio/LD55_3.mp3")
 				music_player.stream.loop = true
+				music_player.volume_db = -8.0
 				music_player.play()
 				level.find_child("DungeonGuardCollider").set_deferred("disabled", true)
 				gander.find_child("CollisionShape2D").set_deferred("disabled", true)
@@ -229,6 +257,8 @@ func _process(delta):
 				tween_scene.tween_callback(func():
 					gander.auto_control_action = "facing_left"
 					state_dict["state"] = StateT.Dungeon_Entrance_Battle
+					state_dict["parry_timer"] = 0.0
+					state_dict["parry_failed_played"] = false
 					state_dict["battle_state"] = BattleState.MainMenu
 					state_dict["battle_menu_setup"] = false
 					state_dict["battle_refresh_gui"] = false
@@ -247,10 +277,19 @@ func _process(delta):
 					tween_text.tween_callback(func():
 						camera.remove_child(indicator_arrow)
 					)
+					gander.battle_started = true
 				)
 		StateT.Dungeon_Entrance_Battle:
+			if state_dict["battle_state"] == BattleState.EnemyAttack:
+				if level_guard_cached_pos == null:
+					level_guard_cached_pos = level_guard.position
 			camera_to_target(delta, level_cached_pos + Vector2(0.0, 500.0))
 			setup_battle_menu()
+			state_dict["parry_timer"] -= delta
+			if not gander.parry_success and gander.hit_active and not state_dict["parry_failed_played"]:
+				sfx_player.stream = sfx_enemy_hit
+				sfx_player.play()
+				state_dict["parry_failed_played"] = true
 		_:
 			pass
 	if gander is MainCharacter and not gander.player_controlled and gander.current_scene_type == gander.GanderSceneT.Introduction:
@@ -407,6 +446,25 @@ func camera_to_target(delta, vec2):
 	camera.position += diff * delta * camera_move_speed
 
 func setup_battle_menu():
+	if state_dict["battle_state"] != BattleState.PlayerWin and state_dict["battle_state"] != BattleState.PlayerLose:
+		if gander.health <= 0:
+			state_dict["battle_state"] = BattleState.PlayerLose
+			music_player.stop()
+			music_player.stream = load("res://audio/LD55_5.mp3")
+			music_player.play()
+			remove_child(gander)
+			main_label.text = "Thanks for playing! I ran out of time for this overly ambitious game..."
+			lower_label.text = "Ohhhh, it ended with a game over... Better luck next time?"
+		elif level_guard.health <= 0:
+			state_dict["battle_state"] = BattleState.PlayerWin
+			music_player.stop()
+			music_player.stream = load("res://audio/LD55_4.mp3")
+			music_player.play()
+			level_guard.get_parent().remove_child(level_guard)
+			main_label.text = "Thanks for playing! I ran out of time for this overly ambitious game..."
+			lower_label.text = "Good show, good show!"
+	elif state_dict["battle_state"] == BattleState.PlayerWin or state_dict["battle_state"] == BattleState.PlayerLose:
+		return
 	match state_dict["battle_state"]:
 		BattleState.MainMenu:
 			if not state_dict["battle_menu_setup"] or state_dict["battle_refresh_gui"]:
@@ -477,7 +535,7 @@ func setup_battle_menu():
 			var summon_node = find_child("SummonAttempt")
 			if summon_node.success_count >= summon_node.MAX_SUCCESS:
 				camera.remove_child(summon_node)
-				var summon_item = find_child("SummonItem")
+				var summon_item = gander.find_child("SummonItem")
 				if summon_item == null:
 					summon_item = Sprite2D.new()
 					summon_item.texture = load("res://gimp/sword.png")
@@ -487,19 +545,26 @@ func setup_battle_menu():
 				else:
 					summon_item.texture = load("res://gimp/sword.png")
 				gander.summon_item = summon_item
+				state_dict["battle_item"] = summon_item
+				gander.attack_type = gander.AttackType.SWORD
+				gander.summon_item_summoned = true
 				sfx_player.stream = sfx_summon
 				sfx_player.play()
 				state_dict["battle_state"] = BattleState.EnemyAttack
+				level_guard_cached_pos = null
+				pick_guard_phase()
 			elif summon_node.error_count >= summon_node.MAX_ERRORS:
 				tween_scene = get_tree().create_tween()
 				tween_scene.tween_method(func(c): for i in range(8): summon_node.summon_arrows_arr[i].self_modulate = c, Color(1.0, 0.0, 0.0), Color(1.0, 0.0, 0.0, 0.0), 1.0)
 				tween_scene.tween_callback(func(): camera.remove_child(summon_node))
 				state_dict["battle_state"] = BattleState.EnemyAttack
+				level_guard_cached_pos = null
+				pick_guard_phase()
 		BattleState.SummonHammer:
 			var summon_node = find_child("SummonAttempt")
 			if summon_node.success_count >= summon_node.MAX_SUCCESS:
 				camera.remove_child(summon_node)
-				var summon_item = find_child("SummonItem")
+				var summon_item = gander.find_child("SummonItem")
 				if summon_item == null:
 					summon_item = Sprite2D.new()
 					summon_item.texture = load("res://gimp/hammer.png")
@@ -509,27 +574,92 @@ func setup_battle_menu():
 				else:
 					summon_item.texture = load("res://gimp/hammer.png")
 				gander.summon_item = summon_item
+				state_dict["battle_item"] = summon_item
+				gander.attack_type = gander.AttackType.HAMMER
+				gander.summon_item_summoned = true
 				sfx_player.stream = sfx_summon
 				sfx_player.play()
 				state_dict["battle_state"] = BattleState.EnemyAttack
+				level_guard_cached_pos = null
+				pick_guard_phase()
 			elif summon_node.error_count >= summon_node.MAX_ERRORS:
 				tween_scene = get_tree().create_tween()
 				tween_scene.tween_method(func(c): for i in range(8): summon_node.summon_arrows_arr[i].self_modulate = c, Color(1.0, 0.0, 0.0), Color(1.0, 0.0, 0.0, 0.0), 1.0)
 				tween_scene.tween_callback(func(): camera.remove_child(summon_node))
 				state_dict["battle_state"] = BattleState.EnemyAttack
+				level_guard_cached_pos = null
+				pick_guard_phase()
 		BattleState.EnemyAttack:
 			if not state_dict["battle_menu_setup"] or state_dict["battle_refresh_gui"]:
 				state_dict["battle_menu_setup"] = true
 				state_dict["battle_refresh_gui"] = false
+				state_dict["parry_failed_played"] = false
 				var battle_arrow = camera.find_child("BattleArrow")
 				var battle_menu_item_0 = camera.find_child("BattleMenuItem0")
 				var battle_menu_item_1 = camera.find_child("BattleMenuItem1")
 				battle_arrow.self_modulate = Color(1, 1, 1, 0)
 				battle_menu_item_0.text = ""
 				battle_menu_item_1.text = ""
+				if gander.summon_item != null:
+					lower_label.text = "Press key-Z, button-A, or Spacebar at the right time to parry!"
+				match guard_phase:
+					GuardPhase.Stomp:
+						tween_scene = get_tree().create_tween()
+						var diff = gander.position.x - level_guard_cached_pos.x
+						tween_scene.tween_property(level_guard, "position", level_guard_cached_pos + Vector2(diff / 2.0, -200.0), 1.0)
+						tween_scene.tween_property(level_guard, "position", level_guard_cached_pos + Vector2(diff / 2.0, 0.0), 0.7)
+						tween_scene.tween_property(level_guard, "position", level_guard_cached_pos + Vector2(diff, -200.0), 1.0)
+						tween_scene.tween_property(level_guard, "position", level_guard_cached_pos + Vector2(diff, 0.0), 0.7)
+						tween_scene.tween_callback(func():
+							state_dict["battle_state"] = BattleState.MainMenu
+							state_dict["battle_menu_setup"] = false
+							lower_label.text = ""
+						)
+						tween_scene.tween_property(level_guard, "position", level_guard_cached_pos, 1.0)
+					_:
+						state_dict["battle_state"] = BattleState.MainMenu
+						state_dict["battle_menu_setup"] = false
+		BattleState.PlayerAttack:
+			if gander.attack_target == null:
+				state_dict["battle_state"] = BattleState.EnemyAttack
+				state_dict["battle_menu_setup"] = false
+				play_attack_sfx_type = null
+				play_attack_sfx_once = false
+			elif not play_attack_sfx_once and play_attack_sfx_type != null:
+				var rng = RandomNumberGenerator.new()
+				if play_attack_sfx_type == "sword":
+					sfx_player.stream = sfx_sword_hit
+					sfx_player.play()
+					level_guard.health -= rng.randi_range(3, 4)
+					level_guard.health_dirty = true
+				elif play_attack_sfx_type == "hammer":
+					sfx_player.stream = sfx_hammer_hit
+					sfx_player.play()
+					level_guard.health -= rng.randi_range(2, 5)
+					level_guard.health_dirty = true
+				play_attack_sfx_type = null
+				play_attack_sfx_once = true
 
 func handle_battle_input(event: InputEvent):
-	if state_dict["battle_state"] == BattleState.SummonSword or state_dict["battle_state"] == BattleState.SummonHammer:
+	if state_dict["battle_state"] == BattleState.SummonSword or state_dict["battle_state"] == BattleState.SummonHammer \
+			or state_dict["battle_state"] == BattleState.PlayerWin or state_dict["battle_state"] == BattleState.PlayerLose:
+		return
+	elif state_dict["battle_state"] == BattleState.EnemyAttack:
+		if event.is_pressed() and event.is_action("Confirm"):
+			if state_dict["parry_timer"] < 0.0 and gander.parry_active and not gander.hit_active and gander.summon_item != null:
+				lower_label.text = "Nice parry!"
+				gander.parry_success = true
+				sfx_player.stream = sfx_parry
+				sfx_player.play()
+				tween_scene.kill()
+				tween_scene = get_tree().create_tween()
+				tween_scene.tween_property(level_guard, "position", level_guard_cached_pos, 0.8)
+				tween_scene.tween_callback(func():
+					state_dict["battle_state"] = BattleState.MainMenu
+					state_dict["battle_menu_setup"] = false
+					lower_label.text = ""
+				)
+			state_dict["parry_timer"] = parry_penalty
 		return
 	if event.is_pressed():
 		if event.is_action("Down"):
@@ -550,8 +680,12 @@ func handle_battle_input(event: InputEvent):
 func handle_battle_action(action):
 	match action:
 		"attack":
+			state_dict["battle_state"] = BattleState.PlayerAttack
+			state_dict["battle_menu_setup"] = false
 			sfx_player.stream = sfx_confirm
 			sfx_player.play()
+			if gander.summon_item != null:
+				gander.attack_target = level_guard
 		"summon":
 			state_dict["battle_state"] = BattleState.SummonMenu
 			state_dict["battle_menu_setup"] = false
@@ -592,3 +726,6 @@ func battle_arrow_positioning():
 		battle_arrow.position.y = (viewport_size.y + arrow_rect.size.y) / 2.0 - (arrow_rect.size.y * (state_dict["battle_options"].size() - state_dict["battle_selection"]))
 		sfx_player.stream = sfx_select
 		sfx_player.play()
+
+func pick_guard_phase():
+	guard_phase = GuardPhase.Stomp
