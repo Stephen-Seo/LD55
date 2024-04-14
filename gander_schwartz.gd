@@ -15,8 +15,19 @@ var last_collided_id = null
 
 @onready var animated = $AnimatedSprite2D
 
+var summon_item = null
+var summon_item_angle = 0.0
+
 const SPEED = 150.0
 const ANIM_DEADZONE = 0.3
+const SUMMON_ITEM_DIST = 100.0
+const SUMMON_ITEM_Y_OFFSET = -30.0
+
+func _process(delta):
+	summon_item_angle += delta
+	if summon_item != null:
+		summon_item.position.x = cos(summon_item_angle) * SUMMON_ITEM_DIST
+		summon_item.position.y = sin(summon_item_angle) * SUMMON_ITEM_DIST + SUMMON_ITEM_Y_OFFSET
 
 func _physics_process(delta):
 	var vec2 = Vector2()

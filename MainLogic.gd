@@ -9,6 +9,10 @@ extends Node2D
 @onready var earth_diamond = $EarthDiamond
 
 @onready var music_player = $MusicPlayer
+@onready var sfx_player = $SFXPlayer
+var sfx_select
+var sfx_confirm
+var sfx_cancel
 
 @onready var camera = $Camera2D
 
@@ -56,8 +60,12 @@ enum StateT {
 	Dungeon_Entrance_Battle,
 }
 
-enum BattleMenu {
+enum BattleState {
 	MainMenu,
+	SummonMenu,
+	SummonSword,
+	SummonHammer,
+	EnemyAttack,
 }
 
 static var state_dict = {}
@@ -93,6 +101,9 @@ func _ready():
 			viewport_size = get_viewport().size
 			state_dict["battle_refresh_gui"] = true
 		)
+		sfx_select = load("res://audio/LD55_sfx_select.mp3")
+		sfx_confirm = load("res://audio/LD55_sfx_confirm.mp3")
+		sfx_cancel = load("res://audio/LD55_sfx_cancel.mp3")
 
 func update_text(text, next_state):
 	if state_dict["timer"] > text_speed:
@@ -216,10 +227,24 @@ func _process(delta):
 				tween_scene.tween_callback(func():
 					gander.auto_control_action = "facing_left"
 					state_dict["state"] = StateT.Dungeon_Entrance_Battle
-					state_dict["battle_state"] = BattleMenu.MainMenu
+					state_dict["battle_state"] = BattleState.MainMenu
 					state_dict["battle_menu_setup"] = false
 					state_dict["battle_refresh_gui"] = false
 					state_dict["battle_item"] = null
+					var indicator_arrow = Sprite2D.new()
+					indicator_arrow.texture = load("res://gimp/arrow.png")
+					indicator_arrow.position.x = (indicator_arrow.get_rect().size.x - viewport_size.x) / 2.0
+					indicator_arrow.position.y = (viewport_size.y - indicator_arrow.get_rect().size.y) / 2.0
+					camera.add_child(indicator_arrow)
+					indicator_arrow.set_owner(camera)
+					tween_text = get_tree().create_tween()
+					tween_text.set_parallel()
+					tween_text.tween_property(indicator_arrow, "scale", Vector2(20.0, 20.0), 1.5)
+					tween_text.tween_property(indicator_arrow, "self_modulate", Color(1, 1, 1, 0), 1.5)
+					tween_text.set_parallel(false)
+					tween_text.tween_callback(func():
+						camera.remove_child(indicator_arrow)
+					)
 				)
 		StateT.Dungeon_Entrance_Battle:
 			camera_to_target(delta, level_cached_pos + Vector2(0.0, 500.0))
@@ -381,7 +406,7 @@ func camera_to_target(delta, vec2):
 
 func setup_battle_menu():
 	match state_dict["battle_state"]:
-		BattleMenu.MainMenu:
+		BattleState.MainMenu:
 			if not state_dict["battle_menu_setup"] or state_dict["battle_refresh_gui"]:
 				state_dict["battle_menu_setup"] = true
 				state_dict["battle_refresh_gui"] = false
@@ -392,6 +417,7 @@ func setup_battle_menu():
 					battle_arrow.texture = load("res://gimp/arrow.png")
 					camera.add_child(battle_arrow, true)
 					battle_arrow.set_owner(camera)
+				battle_arrow.self_modulate = Color(1, 1, 1, 1)
 				var battle_menu_item_0 = camera.find_child("BattleMenuItem0")
 				if battle_menu_item_0 == null:
 					battle_menu_item_0 = Label.new()
@@ -426,8 +452,76 @@ func setup_battle_menu():
 					battle_menu_item_1.position.y = battle_arrow.position.y + arrow_rect.size.y
 					state_dict["battle_selection"] = 0
 					state_dict["battle_options"] = ["attack", "summon"]
+		BattleState.SummonMenu:
+			if not state_dict["battle_menu_setup"] or state_dict["battle_refresh_gui"]:
+				state_dict["battle_menu_setup"] = true
+				state_dict["battle_refresh_gui"] = false
+				var battle_arrow = camera.find_child("BattleArrow")
+				var battle_menu_item_0 = camera.find_child("BattleMenuItem0")
+				var battle_menu_item_1 = camera.find_child("BattleMenuItem1")
+				battle_arrow.self_modulate = Color(1, 1, 1, 1)
+				battle_menu_item_0.text = "Summon Sword"
+				battle_menu_item_1.text = "Summon Hammer"
+				var arrow_rect = battle_arrow.get_rect()
+				battle_arrow.position.x = (arrow_rect.size.x - viewport_size.x) / 2.0
+				battle_arrow.position.y = (viewport_size.y - arrow_rect.size.y * 3.0) / 2.0
+				battle_menu_item_0.position.x = arrow_rect.size.x - viewport_size.x / 2.0
+				battle_menu_item_0.position.y = battle_arrow.position.y
+				battle_menu_item_1.position.x = arrow_rect.size.x - viewport_size.x / 2.0
+				battle_menu_item_1.position.y = battle_arrow.position.y + arrow_rect.size.y
+				state_dict["battle_selection"] = 0
+				state_dict["battle_options"] = ["summon_sword", "summon_hammer"]
+		BattleState.SummonSword:
+			var summon_node = find_child("SummonAttempt")
+			if summon_node.success_count >= summon_node.MAX_SUCCESS:
+				camera.remove_child(summon_node)
+				var summon_item = find_child("SummonItem")
+				if summon_item == null:
+					summon_item = Sprite2D.new()
+					summon_item.texture = load("res://gimp/sword.png")
+					summon_item.set_name(&"SummonItem")
+					gander.add_child(summon_item, true)
+					summon_item.set_owner(gander)
+				else:
+					summon_item.texture = load("res://gimp/sword.png")
+				gander.summon_item = summon_item
+				state_dict["battle_state"] = BattleState.EnemyAttack
+			elif summon_node.error_count >= summon_node.MAX_ERRORS:
+				tween_scene = get_tree().create_tween()
+				tween_scene.tween_method(func(c): for i in range(8): summon_node.summon_arrows_arr[i].self_modulate = c, Color(1.0, 0.0, 0.0), Color(1.0, 0.0, 0.0, 0.0), 1.0)
+				tween_scene.tween_callback(func(): camera.remove_child(summon_node))
+				state_dict["battle_state"] = BattleState.EnemyAttack
+		BattleState.SummonHammer:
+			var summon_node = find_child("SummonAttempt")
+			if summon_node.success_count >= summon_node.MAX_SUCCESS:
+				camera.remove_child(summon_node)
+				var summon_item = find_child("SummonItem")
+				if summon_item == null:
+					summon_item = Sprite2D.new()
+					summon_item.texture = load("res://gimp/hammer.png")
+					summon_item.set_name(&"SummonItem")
+					gander.add_child(summon_item, true)
+					summon_item.set_owner(gander)
+				else:
+					summon_item.texture = load("res://gimp/hammer.png")
+				gander.summon_item = summon_item
+				state_dict["battle_state"] = BattleState.EnemyAttack
+			elif summon_node.error_count >= summon_node.MAX_ERRORS:
+				tween_scene = get_tree().create_tween()
+				tween_scene.tween_method(func(c): for i in range(8): summon_node.summon_arrows_arr[i].self_modulate = c, Color(1.0, 0.0, 0.0), Color(1.0, 0.0, 0.0, 0.0), 1.0)
+				tween_scene.tween_callback(func(): camera.remove_child(summon_node))
+				state_dict["battle_state"] = BattleState.EnemyAttack
+		BattleState.EnemyAttack:
+			var battle_arrow = camera.find_child("BattleArrow")
+			var battle_menu_item_0 = camera.find_child("BattleMenuItem0")
+			var battle_menu_item_1 = camera.find_child("BattleMenuItem1")
+			battle_arrow.self_modulate = Color(1, 1, 1, 0)
+			battle_menu_item_0.text = ""
+			battle_menu_item_1.text = ""
 
 func handle_battle_input(event: InputEvent):
+	if state_dict["battle_state"] == BattleState.SummonSword or state_dict["battle_state"] == BattleState.SummonHammer:
+		return
 	if event.is_pressed():
 		if event.is_action("Down"):
 			state_dict["battle_selection"] += 1
@@ -439,9 +533,77 @@ func handle_battle_input(event: InputEvent):
 			if state_dict["battle_selection"] < 0:
 				state_dict["battle_selection"] = state_dict["battle_options"].size() - 1
 			battle_arrow_positioning()
+		elif event.is_action("Confirm"):
+			handle_battle_action(state_dict["battle_options"][state_dict["battle_selection"]])
+		elif event.is_action("Cancel"):
+			handle_battle_action("cancel")
+
+func handle_battle_action(action):
+	match action:
+		"attack":
+			sfx_player.stream = sfx_confirm
+			sfx_player.play()
+		"summon":
+			state_dict["battle_state"] = BattleState.SummonMenu
+			state_dict["battle_menu_setup"] = false
+			sfx_player.stream = sfx_confirm
+			sfx_player.play()
+		"summon_sword":
+			#var summon_item = find_child("SummonItem")
+			#if summon_item == null:
+				#summon_item = Sprite2D.new()
+				#summon_item.texture = load("res://gimp/sword.png")
+				#summon_item.set_name(&"SummonItem")
+				#gander.add_child(summon_item, true)
+				#summon_item.set_owner(gander)
+			#else:
+				#summon_item.texture = load("res://gimp/sword.png")
+			#gander.summon_item = summon_item
+			#state_dict["battle_state"] = BattleState.EnemyAttack
+			#state_dict["battle_menu_setup"] = false
+			state_dict["battle_state"] = BattleState.SummonSword
+			state_dict["battle_menu_setup"] = false
+			var summon_scene = load("res://summoning.tscn")
+			var summon_node = summon_scene.instantiate()
+			summon_node.set_name(&"SummonAttempt")
+			camera.add_child(summon_node, true)
+			summon_node.set_owner(camera)
+			sfx_player.stream = sfx_confirm
+			sfx_player.play()
+		"summon_hammer":
+			#var summon_item = find_child("SummonItem")
+			#if summon_item == null:
+				#summon_item = Sprite2D.new()
+				#summon_item.texture = load("res://gimp/hammer.png")
+				#summon_item.set_name(&"SummonItem")
+				#gander.add_child(summon_item, true)
+				#summon_item.set_owner(gander)
+			#else:
+				#summon_item.texture = load("res://gimp/hammer.png")
+			#gander.summon_item = summon_item
+			#state_dict["battle_state"] = BattleState.EnemyAttack
+			#state_dict["battle_menu_setup"] = false
+			state_dict["battle_state"] = BattleState.SummonHammer
+			state_dict["battle_menu_setup"] = false
+			var summon_scene = load("res://summoning.tscn")
+			var summon_node = summon_scene.instantiate()
+			summon_node.set_name(&"SummonAttempt")
+			camera.add_child(summon_node, true)
+			summon_node.set_owner(camera)
+			sfx_player.stream = sfx_confirm
+			sfx_player.play()
+		"cancel":
+			state_dict["battle_state"] = BattleState.MainMenu
+			state_dict["battle_menu_setup"] = false
+			sfx_player.stream = sfx_cancel
+			sfx_player.play()
+		_:
+			pass
 
 func battle_arrow_positioning():
 	var battle_arrow: Sprite2D = camera.find_child("BattleArrow")
 	if battle_arrow != null:
 		var arrow_rect = battle_arrow.get_rect()
 		battle_arrow.position.y = (viewport_size.y + arrow_rect.size.y) / 2.0 - (arrow_rect.size.y * (state_dict["battle_options"].size() - state_dict["battle_selection"]))
+		sfx_player.stream = sfx_select
+		sfx_player.play()

@@ -1,0 +1,54 @@
+[gd_scene load_steps=4 format=3 uid="uid://b7tummdg08cfc"]
+
+[ext_resource type="Script" path="res://summoning.gd" id="1_qh1sn"]
+[ext_resource type="Texture2D" uid="uid://dvyxj067n812g" path="res://gimp/summon_arrow.png" id="2_io4qw"]
+
+[sub_resource type="CanvasTexture" id="CanvasTexture_oraey"]
+
+[node name="Node2D" type="Node2D"]
+script = ExtResource("1_qh1sn")
+
+[node name="SummonArrow" type="Sprite2D" parent="."]
+position = Vector2(-136, -56)
+texture = ExtResource("2_io4qw")
+
+[node name="SummonArrow2" type="Sprite2D" parent="."]
+position = Vector2(-46, -56)
+texture = ExtResource("2_io4qw")
+
+[node name="SummonArrow3" type="Sprite2D" parent="."]
+position = Vector2(47, -55)
+texture = ExtResource("2_io4qw")
+
+[node name="SummonArrow4" type="Sprite2D" parent="."]
+position = Vector2(143, -56)
+texture = ExtResource("2_io4qw")
+
+[node name="SummonArrow5" type="Sprite2D" parent="."]
+position = Vector2(-144, 57)
+texture = ExtResource("2_io4qw")
+
+[node name="SummonArrow6" type="Sprite2D" parent="."]
+position = Vector2(-49, 56)
+texture = ExtResource("2_io4qw")
+
+[node name="SummonArrow7" type="Sprite2D" parent="."]
+position = Vector2(47, 57)
+texture = ExtResource("2_io4qw")
+
+[node name="SummonArrow8" type="Sprite2D" parent="."]
+position = Vector2(136, 58)
+texture = ExtResource("2_io4qw")
+
+[node name="Label" type="Label" parent="."]
+offset_left = -187.0
+offset_top = -140.0
+offset_right = 188.0
+offset_bottom = -100.0
+theme_override_font_sizes/font_size = 24
+text = "Press the directions to summon!"
+
+[node name="TimerBox" type="Sprite2D" parent="."]
+position = Vector2(0, 135)
+scale = Vector2(380, 50)
+texture = SubResource("CanvasTexture_oraey")
