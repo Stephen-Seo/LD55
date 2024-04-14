@@ -20,6 +20,7 @@ var last_collided_id = null
 
 var battle_started = false
 
+var max_health = 30
 var health = 30
 var health_dirty = true
 

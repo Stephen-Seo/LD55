@@ -72,6 +72,7 @@ enum BattleState {
 	SummonMenu,
 	SummonSword,
 	SummonHammer,
+	SummonHealth,
 	EnemyAttack,
 	PlayerAttack,
 	PlayerWin,
@@ -490,6 +491,12 @@ func setup_battle_menu():
 					battle_menu_item_1.set_name(&"BattleMenuItem1")
 					camera.add_child(battle_menu_item_1, true)
 					battle_menu_item_1.set_owner(camera)
+				var battle_menu_item_2 = camera.find_child("BattleMenuItem2")
+				if battle_menu_item_2 == null:
+					battle_menu_item_2 = Label.new()
+					battle_menu_item_2.set_name(&"BattleMenuItem2")
+					camera.add_child(battle_menu_item_2, true)
+					battle_menu_item_2.set_owner(camera)
 				if state_dict["battle_item"] == null:
 					battle_menu_item_0.text = "Summon Item"
 					battle_menu_item_1.text = ""
@@ -519,18 +526,22 @@ func setup_battle_menu():
 				var battle_arrow = camera.find_child("BattleArrow")
 				var battle_menu_item_0 = camera.find_child("BattleMenuItem0")
 				var battle_menu_item_1 = camera.find_child("BattleMenuItem1")
+				var battle_menu_item_2 = camera.find_child("BattleMenuItem2")
 				battle_arrow.self_modulate = Color(1, 1, 1, 1)
 				battle_menu_item_0.text = "Summon Sword"
 				battle_menu_item_1.text = "Summon Hammer"
+				battle_menu_item_2.text = "Summon Health Potion (+5 HP)"
 				var arrow_rect = battle_arrow.get_rect()
 				battle_arrow.position.x = (arrow_rect.size.x - viewport_size.x) / 2.0
-				battle_arrow.position.y = (viewport_size.y - arrow_rect.size.y * 3.0) / 2.0
+				battle_arrow.position.y = (viewport_size.y - arrow_rect.size.y * 5.0) / 2.0
 				battle_menu_item_0.position.x = arrow_rect.size.x - viewport_size.x / 2.0
 				battle_menu_item_0.position.y = battle_arrow.position.y
 				battle_menu_item_1.position.x = arrow_rect.size.x - viewport_size.x / 2.0
 				battle_menu_item_1.position.y = battle_arrow.position.y + arrow_rect.size.y
+				battle_menu_item_2.position.x = arrow_rect.size.x - viewport_size.x / 2.0
+				battle_menu_item_2.position.y = battle_arrow.position.y + arrow_rect.size.y * 2.0
 				state_dict["battle_selection"] = 0
-				state_dict["battle_options"] = ["summon_sword", "summon_hammer"]
+				state_dict["battle_options"] = ["summon_sword", "summon_hammer", "summon_health"]
 		BattleState.SummonSword:
 			var summon_node = find_child("SummonAttempt")
 			if summon_node.success_count >= summon_node.MAX_SUCCESS:
@@ -589,6 +600,34 @@ func setup_battle_menu():
 				state_dict["battle_state"] = BattleState.EnemyAttack
 				level_guard_cached_pos = null
 				pick_guard_phase()
+		BattleState.SummonHealth:
+			var summon_node = find_child("SummonAttempt")
+			if summon_node.success_count >= summon_node.MAX_SUCCESS:
+				camera.remove_child(summon_node)
+				var summon_item = gander.find_child("SummonItem")
+				if summon_item == null:
+					pass
+				else:
+					gander.remove_child(summon_item)
+					gander.summon_item = null
+				gander.summon_item_summoned = false
+				gander.health += 5
+				if gander.health > gander.max_health:
+					gander.health = gander.max_health
+				gander.health_dirty = true
+				sfx_player.stream = sfx_summon
+				sfx_player.play()
+				state_dict["battle_state"] = BattleState.EnemyAttack
+				state_dict["battle_item"] = null
+				level_guard_cached_pos = null
+				pick_guard_phase()
+			elif summon_node.error_count >= summon_node.MAX_ERRORS:
+				tween_scene = get_tree().create_tween()
+				tween_scene.tween_method(func(c): for i in range(8): summon_node.summon_arrows_arr[i].self_modulate = c, Color(1.0, 0.0, 0.0), Color(1.0, 0.0, 0.0, 0.0), 1.0)
+				tween_scene.tween_callback(func(): camera.remove_child(summon_node))
+				state_dict["battle_state"] = BattleState.EnemyAttack
+				level_guard_cached_pos = null
+				pick_guard_phase()
 		BattleState.EnemyAttack:
 			if not state_dict["battle_menu_setup"] or state_dict["battle_refresh_gui"]:
 				state_dict["battle_menu_setup"] = true
@@ -597,9 +636,11 @@ func setup_battle_menu():
 				var battle_arrow = camera.find_child("BattleArrow")
 				var battle_menu_item_0 = camera.find_child("BattleMenuItem0")
 				var battle_menu_item_1 = camera.find_child("BattleMenuItem1")
+				var battle_menu_item_2 = camera.find_child("BattleMenuItem2")
 				battle_arrow.self_modulate = Color(1, 1, 1, 0)
 				battle_menu_item_0.text = ""
 				battle_menu_item_1.text = ""
+				battle_menu_item_2.text = ""
 				if gander.summon_item != null:
 					lower_label.text = "Press key-Z, button-A, or Spacebar at the right time to parry!"
 				match guard_phase:
@@ -642,6 +683,7 @@ func setup_battle_menu():
 
 func handle_battle_input(event: InputEvent):
 	if state_dict["battle_state"] == BattleState.SummonSword or state_dict["battle_state"] == BattleState.SummonHammer \
+			or state_dict["battle_state"] == BattleState.SummonHealth \
 			or state_dict["battle_state"] == BattleState.PlayerWin or state_dict["battle_state"] == BattleState.PlayerLose:
 		return
 	elif state_dict["battle_state"] == BattleState.EnemyAttack:
@@ -703,6 +745,16 @@ func handle_battle_action(action):
 			sfx_player.play()
 		"summon_hammer":
 			state_dict["battle_state"] = BattleState.SummonHammer
+			state_dict["battle_menu_setup"] = false
+			var summon_scene = load("res://summoning.tscn")
+			var summon_node = summon_scene.instantiate()
+			summon_node.set_name(&"SummonAttempt")
+			camera.add_child(summon_node, true)
+			summon_node.set_owner(camera)
+			sfx_player.stream = sfx_confirm
+			sfx_player.play()
+		"summon_health":
+			state_dict["battle_state"] = BattleState.SummonHealth
 			state_dict["battle_menu_setup"] = false
 			var summon_scene = load("res://summoning.tscn")
 			var summon_node = summon_scene.instantiate()
