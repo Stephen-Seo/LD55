@@ -7,3 +7,5 @@
 [web version of game (please click on page for music to play on start)](https://burnedkirby.com/ld55)
 
 [screenlapse video - making of the game](https://youtu.be/DYFaVKRIh3s)
+
+[itch.io page link](https://seodisparate.itch.io/ld55-compo)
